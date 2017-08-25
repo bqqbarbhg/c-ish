@@ -10,6 +10,11 @@ cache:
     directories:
         - premake_build
 
+addons:
+    apt:
+        packages:
+            - g++-multilib
+
 env:
     - CONFIGURATION=debug_x86
     - CONFIGURATION=debug_x64
