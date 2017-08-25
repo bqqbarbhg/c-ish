@@ -6,6 +6,9 @@ compiler:
     - gcc
     - clang
 
+cache:
+    - premake_build
+
 env:
     - CONFIGURATION=debug_x86
     - CONFIGURATION=debug_x64
@@ -13,15 +16,10 @@ env:
     - CONFIGURATION=release_x64
 
 install:
-    - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha12/premake-5.0.0-alpha12-src.zip -O premake.zip
-    - unzip -qq premake.zip
-    - cd premake-5.0.0-alpha12/build/gmake.unix
-    - make config=release
-    - cd ../../..
-    - mv premake-5.0.0-alpha12/bin/release/premake5 premake5
+    - ./install-premake.sh
 
 before_script:
-    - ./premake5 gmake
+    - premake_build/premake5 gmake
 
 script:
     - make -C build config=$CONFIGURATION

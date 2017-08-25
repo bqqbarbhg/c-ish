@@ -5,6 +5,7 @@
 #include <string.h>
 #include <new>
 #include <utility>
+#include <type_traits>
 
 typedef unsigned usize;
 typedef unsigned uhash;
