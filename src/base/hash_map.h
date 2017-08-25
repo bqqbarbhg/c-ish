@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include <stdlib.h>
+#include <string.h>
 #include <new>
 #include <utility>
 
@@ -450,63 +451,55 @@ struct map_key_val
 	Val val;
 };
 
-template <typename Key, typename Val>
-struct hash_map_base : hash_container<map_key_val<Key, Val>>
-{
-};
-
-template <typename Key>
-struct hash_set_base : hash_container<set_key_val<Key>>
-{
-};
-
 template <typename T>
 struct default_hash;
 
 template <typename Key, typename Val, typename Hash = default_hash<Key>>
-struct hash_map : hash_map_base<Key, Val>
+struct hash_map : hash_container<map_key_val<Key, Val>>
 {
+	typedef hash_container<map_key_val<Key, Val>> base;
+	typedef typename base::key_val key_val;
 	typedef map_key_val<const Key, Val> value_type;
 
-	struct iterator : iterator_base<iterator>
+	struct iterator : hash_base::iterator_base<iterator>
 	{
-		iterator() : iterator_base() { }
-		iterator(const hash_container *h, usize i) : iterator_base(h, i) { }
+		iterator() : hash_base::iterator_base<iterator>() { }
+		iterator(const hash_base *h, usize i) : hash_base::iterator_base<iterator>(h, i) { }
 
-		value_type *operator->() { return &((value_type*)base->kvbuf)[index]; }
-		value_type &operator*()  { return ((value_type*)base->kvbuf)[index]; }
+		value_type *operator->() { return &((value_type*)this->base->kvbuf)[this->index]; }
+		value_type &operator*()  { return ((value_type*)this->base->kvbuf)[this->index]; }
 	};
 
-	struct const_iterator : iterator_base<const_iterator>
+	struct const_iterator : hash_base::iterator_base<const_iterator>
 	{
-		const_iterator() : iterator_base() { }
-		const_iterator(iterator it) : iterator_base(it.base, it.index) { }
-		const_iterator(const hash_container *h, usize i) : iterator_base(h, i) { }
+		const_iterator() : hash_base::iterator_base<const_iterator>() { }
+		const_iterator(iterator it) : hash_base::iterator_base<const_iterator>(it.base, it.index) { }
+		const_iterator(const hash_base *h, usize i) : hash_base::iterator_base<const_iterator>(h, i) { }
 
-		const value_type *operator->() { return &((const value_type*)base->kvbuf)[index]; }
-		const value_type &operator*()  { return ((const value_type*)base->kvbuf)[index]; }
+		const value_type *operator->() { return &((const value_type*)this->base->kvbuf)[this->index]; }
+		const value_type &operator*()  { return ((const value_type*)this->base->kvbuf)[this->index]; }
 	};
 
 	template <typename K, typename V>
 	bool insert_impl(K &&key, V &&value)
 	{
 		key_val *kv;
-		bool inserted = insert_with_hash_ptr(key, Hash()(key), kv);
+		bool inserted = base::insert_with_hash_ptr(key, Hash()(key), kv);
 		if (inserted) {
-			new (&kv->key) Key(std::forward<std::remove_reference<K>::type>(key));
+			new (&kv->key) Key(std::forward<typename std::remove_reference<K>::type>(key));
 		} else {
 			kv->val.~Val();
 		}
-		new (&kv->val) Val(std::forward<std::remove_reference<V>::type>(value));
+		new (&kv->val) Val(std::forward<typename std::remove_reference<V>::type>(value));
 		return inserted;
 	}
 
 	template <typename K>
 	bool insert_ptr_impl(K &&key, key_val *&kv)
 	{
-		bool inserted = insert_with_hash_ptr(key, Hash()(key), kv);
+		bool inserted = base::insert_with_hash_ptr(key, Hash()(key), kv);
 		if (inserted) {
-			new (&kv->key) Key(std::forward<std::remove_reference<K>::type>(key));
+			new (&kv->key) Key(std::forward<typename std::remove_reference<K>::type>(key));
 			new (&kv->val) Val();
 		}
 		return inserted;
@@ -526,48 +519,50 @@ struct hash_map : hash_map_base<Key, Val>
 	iterator erase(const_iterator it)
 	{
 		usize const slot = it.index;
-		erase_slot(slot);
-		return iterator(this, find_first_used_slot(slot));
+		base::erase_slot(slot);
+		return iterator(this, base::find_first_used_slot(slot));
 	}
 
 	iterator erase(const Key &key)
 	{
-		usize slot = find_slot_with_hash(key, Hash()(key));
-		erase_slot(slot);
-		return iterator(this, find_first_used_slot(slot));
+		usize slot = base::find_slot_with_hash(key, Hash()(key));
+		base::erase_slot(slot);
+		return iterator(this, base::find_first_used_slot(slot));
 	}
 
 	iterator find(const Key &key)
 	{
-		usize slot = find_slot_with_hash(key, Hash()(key));
+		usize slot = base::find_slot_with_hash(key, Hash()(key));
 		return iterator(this, slot);
 	}
 
 	const_iterator find(const Key &key) const
 	{
-		usize slot = find_slot_with_hash(key, Hash()(key));
+		usize slot = base::find_slot_with_hash(key, Hash()(key));
 		return const_iterator(this, slot);
 	}
 
 
-	const_iterator begin() const { return const_iterator(this, find_first_used_slot()); }
-	iterator begin() { return iterator(this, find_first_used_slot()); }
-	const_iterator end() const { return const_iterator(this, capacity); }
-	iterator end() { return iterator(this, capacity); }
+	const_iterator begin() const { return const_iterator(this, base::find_first_used_slot()); }
+	iterator begin() { return iterator(this, base::find_first_used_slot()); }
+	const_iterator end() const { return const_iterator(this, base::capacity); }
+	iterator end() { return iterator(this, base::capacity); }
 };
 
 template <typename Key, typename Hash = default_hash<Key>>
-struct hash_set : hash_set_base<Key>
+struct hash_set : hash_container<set_key_val<Key>>
 {
+	typedef hash_container<set_key_val<Key>> base;
+	typedef typename base::key_val key_val;
 	typedef Key value_type;
 
-	struct const_iterator : iterator_base<const_iterator>
+	struct const_iterator : hash_base::iterator_base<const_iterator>
 	{
-		const_iterator() : iterator_base() { }
-		const_iterator(const hash_container *h, usize i) : iterator_base(h, i) { }
+		const_iterator() : hash_base::iterator_base<const_iterator>() { }
+		const_iterator(const hash_base *h, usize i) : hash_base::iterator_base<const_iterator>(h, i) { }
 
-		const value_type *operator->() { return &((key_val*)base->kvbuf)[index].key; }
-		const value_type &operator*()  { return ((key_val*)base->kvbuf)[index].key; }
+		const value_type *operator->() { return &((key_val*)this->base->kvbuf)[this->index].key; }
+		const value_type &operator*()  { return ((key_val*)this->base->kvbuf)[this->index].key; }
 	};
 
 	typedef const_iterator iterator;
@@ -576,9 +571,9 @@ struct hash_set : hash_set_base<Key>
 	bool insert_impl(K &&key)
 	{
 		key_val *kv;
-		bool inserted = insert_with_hash_ptr(key, Hash()(key), kv);
+		bool inserted = base::insert_with_hash_ptr(key, Hash()(key), kv);
 		if (inserted) {
-			new (&kv->key) Key(std::forward<std::remove_reference<K>::type>(key));
+			new (&kv->key) Key(std::forward<typename std::remove_reference<K>::type>(key));
 		}
 		return inserted;
 	}
@@ -589,26 +584,26 @@ struct hash_set : hash_set_base<Key>
 	iterator erase(const_iterator it)
 	{
 		usize const slot = it.index;
-		erase_slot(slot);
-		return iterator(this, find_first_used_slot(slot));
+		base::erase_slot(slot);
+		return iterator(this, base::find_first_used_slot(slot));
 	}
 
 	iterator erase(const Key &key)
 	{
-		usize slot = find_slot_with_hash(key, Hash()(key));
-		erase_slot(slot);
-		return iterator(this, find_first_used_slot(slot));
+		usize slot = base::find_slot_with_hash(key, Hash()(key));
+		base::erase_slot(slot);
+		return iterator(this, base::find_first_used_slot(slot));
 	}
 
 	const_iterator find(const Key &key) const
 	{
-		usize slot = find_slot_with_hash(key, Hash()(key));
+		usize slot = base::find_slot_with_hash(key, Hash()(key));
 		return const_iterator(this, slot);
 	}
 
-	const_iterator begin() const { return const_iterator(this, find_first_used_slot()); }
-	iterator begin() { return iterator(this, find_first_used_slot()); }
-	const_iterator end() const { return const_iterator(this, capacity); }
-	iterator end() { return iterator(this, capacity); }
+	const_iterator begin() const { return const_iterator(this, base::find_first_used_slot()); }
+	iterator begin() { return iterator(this, base::find_first_used_slot()); }
+	const_iterator end() const { return const_iterator(this, base::capacity); }
+	iterator end() { return iterator(this, base::capacity); }
 };
 

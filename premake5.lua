@@ -4,6 +4,7 @@ workspace "c-ish"
 	location "build"
 	includedirs { "src" }
 	flags { "C++11" }
+	targetdir "bin/%{cfg.buildcfg}_%{cfg.platform}"
 
 	filter "action:vs*"
 		defines { "_CRT_SECURE_NO_WARNINGS" }
@@ -26,20 +27,17 @@ workspace "c-ish"
 project "base"
 	kind "StaticLib"
 	language "C++"
-	targetdir "bin/%{cfg.buildcfg}"
 	files { "src/base/**.h", "src/base/**.cpp" }
 
 project "compiler"
 	kind "StaticLib"
 	language "C++"
-	targetdir "bin/%{cfg.buildcfg}"
 	files { "src/compiler/**.h", "src/compiler/**.cpp" }
 	links { "base" }
 
 project "test"
 	kind "ConsoleApp"
 	language "C++"
-	targetdir "bin/%{cfg.buildcfg}"
 	files { "src/test/**.h", "src/test/**.cpp" }
 	links { "base", "compiler" }
 
