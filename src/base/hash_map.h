@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base.h"
+#include <stdlib.h>
 #include <new>
 #include <utility>
 
