@@ -5,6 +5,8 @@
 test_case_struct g_tests[1024];
 uint32_t g_num_tests = 0;
 
+operator_counts counts;
+
 test_case_struct::test_case_struct(const char *name, void (*func)())
 	: name(name)
 	, func(func)
@@ -39,6 +41,7 @@ bool run_tests()
 	for (uint32_t i = 0; i < num; i++) {
 		auto &test = g_tests[i];
 		g_did_fail = false;
+		counts.reset();
 		test.func();
 		if (g_did_fail) {
 			fprintf(stderr, "%s fail: %s (%s)\n", test.name, g_fail_msg, g_fail_expr);

@@ -12,6 +12,17 @@ constexpr usize align_up(usize val, usize alignment)
 	return val + ((alignment - (val & (alignment - 1))) & (alignment - 1));
 }
 
+inline usize next_pow2(usize val)
+{
+	usize x = val - 1;
+	x |= x >> 1;
+	x |= x >> 2;
+	x |= x >> 4;
+	x |= x >> 8;
+	x |= x >> 16;
+	return x + 1;
+}
+
 template <typename T>
 void cswap(T &a, T &b)
 {
@@ -70,6 +81,88 @@ struct hash_base
 	usize capacity;
 	uhash *hbuf;
 	void  *kvbuf;
+
+	// -- Iterators
+
+	template <typename It>
+	struct iterator_base
+	{
+		const hash_base *base;
+		usize index;
+
+		iterator_base()
+		{
+		}
+
+		iterator_base(const hash_base *base, usize index)
+			: base(base)
+			, index(index)
+		{
+		}
+
+		bool operator!=(const It &rhs) const
+		{
+			c_assert(base == rhs.base);
+			return index != rhs.index;
+		}
+
+		bool operator==(const It &rhs) const
+		{
+			c_assert(base == rhs.base);
+			return index == rhs.index;
+		}
+
+		It& operator++()
+		{
+			uhash *const hb = base->hbuf;
+			usize const cap = base->capacity;
+			usize ix = index + 1;
+
+			while (ix < cap && hb[ix] == 0)
+				ix++;
+
+			index = ix;
+			return static_cast<It&>(*this);
+		}
+
+		It& operator--()
+		{
+			uhash *const hb = base->hbuf;
+			usize ix = index - 1;
+
+			while (ix >= 0 && hb[ix] == 0)
+				ix--;
+
+			index = ix;
+			return static_cast<It&>(*this);
+		}
+
+		It operator++(int)
+		{
+			It copy = static_cast<It&>(*this);
+			++copy;
+			return copy;
+		}
+
+		It operator--(int)
+		{
+			It copy = static_cast<It&>(*this);
+			--copy;
+			return copy;
+		}
+	};
+
+	usize find_first_used_slot(usize begin = 0)
+	{
+		uhash *const hb = hbuf;
+		usize const cap = capacity;
+		usize i;
+		for (i = begin; i < cap; i++) {
+			if (hb[i] != 0)
+				break;
+		}
+		return i;
+	}
 };
 
 template <typename KeyVal>
@@ -94,11 +187,15 @@ struct hash_container : hash_base
 			if (std::is_trivially_copyable<key_val>::value) {
 				memcpy(alloc, rhs.kvbuf, alloc_size);
 			} else {
-				memcpy(hbuf, rhs.hbuf, sizeof(uhash) * capacity);
+				uhash *const hb = hbuf;
 				key_val *const kvb = (key_val*)kvbuf;
+				const uhash *const rhb = rhs.hbuf;
 				const key_val *const rkvb = (const key_val*)rhs.kvbuf;
 				for (usize i = 0; i < capacity; i++) {
-					new (&kvb[i]) key_val(rkvb[i]);
+					uhash hash = hb[i] = rhb[i];
+					if (hash) {
+						new (&kvb[i]) key_val(rkvb[i]);
+					}
 				}
 			}
 		} else {
@@ -112,10 +209,31 @@ struct hash_container : hash_base
 	{
 	}
 
+	~hash_container()
+	{
+		if (!std::is_trivially_copyable<key_val>::value) {
+			uhash *const hb = hbuf;
+			key_val *const kvb = (key_val*)kvbuf;
+			for (usize i = 0; i < capacity; i++) {
+				if (hb[i]) {
+					kvb[i].~key_val();
+				}
+			}
+		}
+	}
+
 	hash_container &operator=(const hash_container &rhs)
 	{
 		this->~hash_container();
 		new (this) hash_container(rhs);
+		return *this;
+	}
+
+
+	hash_container &operator=(hash_container &&rhs)
+	{
+		this->~hash_container();
+		new (this) hash_container(std::move(rhs));
 		return *this;
 	}
 
@@ -310,87 +428,12 @@ struct hash_container : hash_base
 		}
 	}
 
-	usize find_first_used_slot(usize begin = 0)
+	void reserve(usize size)
 	{
-		uhash *const hb = hbuf;
-		usize const cap = capacity;
-		usize i;
-		for (i = begin; i < cap; i++) {
-			if (hb[i] != 0)
-				break;
-		}
-		return i;
+		usize const pow2 = next_pow2(size + 1);
+		if (pow2 * 2 > capacity)
+			rehash_impl(pow2);
 	}
-
-	// -- Iterators
-
-	template <typename It>
-	struct iterator_base
-	{
-		const hash_base *base;
-		usize index;
-
-		iterator_base()
-		{
-		}
-
-		iterator_base(const hash_base *base, usize index)
-			: base(base)
-			, index(index)
-		{
-		}
-
-		bool operator!=(const It &rhs) const
-		{
-			c_assert(base == rhs.base);
-			return index != rhs.index;
-		}
-
-		bool operator==(const It &rhs) const
-		{
-			c_assert(base == rhs.base);
-			return index == rhs.index;
-		}
-
-		It& operator++()
-		{
-			uhash *const hb = base->hbuf;
-			usize const cap = base->capacity;
-			usize ix = index + 1;
-
-			while (ix < cap && hb[ix] == 0)
-				ix++;
-
-			index = ix;
-			return static_cast<It&>(*this);
-		}
-
-		It& operator--()
-		{
-			uhash *const hb = base->hbuf;
-			usize ix = index - 1;
-
-			while (ix >= 0 && hb[ix] == 0)
-				ix--;
-
-			index = ix;
-			return static_cast<It&>(*this);
-		}
-
-		It operator++(int)
-		{
-			It copy = static_cast<It&>(*this);
-			++copy;
-			return copy;
-		}
-
-		It operator--(int)
-		{
-			It copy = static_cast<It&>(*this);
-			--copy;
-			return copy;
-		}
-	};
 };
 
 template <typename Key>
@@ -561,7 +604,6 @@ struct hash_set : hash_set_base<Key>
 		usize slot = find_slot_with_hash(key, Hash()(key));
 		return const_iterator(this, slot);
 	}
-
 
 	const_iterator begin() const { return const_iterator(this, find_first_used_slot()); }
 	iterator begin() { return iterator(this, find_first_used_slot()); }
