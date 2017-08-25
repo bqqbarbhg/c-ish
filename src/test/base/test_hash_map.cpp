@@ -338,3 +338,16 @@ test_case(hash_map_non_pod_insert_over)
 	test_assert(hash_count == 3, "No extra hashes");
 	test_assert(counts.ctor == counts.dtor, "Objects destroyed");
 }
+
+test_case(hash_map_count)
+{
+	hash_map<int, int, int_hash> map;
+
+	map.insert(1, 10);
+	map.insert(2, 20);
+	map.insert(3, 30);
+	map.insert(4, 40);
+
+	test_assert(map.count == 4, "Count is correct");
+}
+
