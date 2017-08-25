@@ -24,6 +24,6 @@ before_script:
     - ./premake5 gmake
 
 script:
-    - make -C build/Makefile config=$CONFIGURATION
+    - make -C build config=$CONFIGURATION
     - bin/$CONFIGURATION/test
 
