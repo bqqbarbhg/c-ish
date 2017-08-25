@@ -13,7 +13,7 @@ env:
     - CONFIGURATION=release_x64
 
 install:
-    - curl https://github.com/premake/premake-core/releases/download/v5.0.0-alpha12/premake-5.0.0-alpha12-src.zip -o premake.zip
+    - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha12/premake-5.0.0-alpha12-src.zip -O premake.zip
     - unzip premake.zip
     - cd premake-5.0.0-alpha6/build/gmake.unix
     - make config=release
