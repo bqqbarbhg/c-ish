@@ -1,5 +1,5 @@
 workspace "c-ish"
-	configurations { "debug", "release" }
+	configurations { "debug", "release", "final_release" }
 	platforms { "x86", "x64" }
 	location "build"
 	includedirs { "src" }
@@ -14,6 +14,11 @@ workspace "c-ish"
 		flags { "Symbols" }
 
 	filter "configurations:release"
+		defines { "NDEBUG" }
+		optimize "On"
+		flags { "Symbols" }
+
+	filter "configurations:final_release"
 		defines { "NDEBUG" }
 		optimize "On"
 		flags { "LinkTimeOptimization" }
