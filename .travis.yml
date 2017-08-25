@@ -7,7 +7,8 @@ compiler:
     - clang
 
 cache:
-    - premake_build
+    directories:
+        - premake_build
 
 env:
     - CONFIGURATION=debug_x86

@@ -187,7 +187,7 @@ struct hash_container : hash_base
 			kvbuf = alloc;
 			hbuf = (uhash*)((char*)kvbuf + align_up(sizeof(key_val) * capacity, alignof(usize)));
 
-			if (std::is_trivially_copyable<key_val>::value) {
+			if (std::is_trivially_constructible<key_val>::value) {
 				memcpy(alloc, rhs.kvbuf, alloc_size);
 			} else {
 				uhash *const hb = hbuf;
@@ -214,7 +214,7 @@ struct hash_container : hash_base
 
 	~hash_container()
 	{
-		if (!std::is_trivially_copyable<key_val>::value) {
+		if (!std::is_trivially_constructible<key_val>::value) {
 			uhash *const hb = hbuf;
 			key_val *const kvb = (key_val*)kvbuf;
 			for (usize i = 0; i < capacity; i++) {
