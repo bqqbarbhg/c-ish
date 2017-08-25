@@ -21,7 +21,7 @@ install:
     - mv premake-5.0.0-alpha12/bin/release/premake5 premake5
 
 before_script:
-    - premake5 gmake
+    - ./premake5 gmake
 
 script:
     - make -C build/Makefile config=$CONFIGURATION
