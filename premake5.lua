@@ -3,6 +3,7 @@ workspace "c-ish"
 	platforms { "x86", "x64" }
 	location "build"
 	includedirs { "src" }
+	flags { "C++11" }
 
 	filter "action:vs*"
 		defines { "_CRT_SECURE_NO_WARNINGS" }
