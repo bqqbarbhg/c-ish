@@ -1,5 +1,5 @@
 workspace "c-ish"
-	configurations { "Debug", "Release" }
+	configurations { "debug", "release" }
 	platforms { "x86", "x64" }
 	location "build"
 	includedirs { "src" }
@@ -9,11 +9,11 @@ workspace "c-ish"
 	filter "action:vs*"
 		defines { "_CRT_SECURE_NO_WARNINGS" }
 
-	filter "configurations:Debug"
+	filter "configurations:debug"
 		defines { "DEBUG" }
 		flags { "Symbols" }
 
-	filter "configurations:Release"
+	filter "configurations:release"
 		defines { "NDEBUG" }
 		optimize "On"
 		flags { "LinkTimeOptimization" }
