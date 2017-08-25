@@ -15,6 +15,12 @@ constexpr usize align_up(usize val, usize alignment)
 	return val + ((alignment - (val & (alignment - 1))) & (alignment - 1));
 }
 
+#if __GNUG__ && __GNUC__ < 5
+#define c_trivially_copyable(x) (__has_trivial_copy(x))
+#else
+#define c_trivially_copyable(x) (std::is_trivially_copyable<x>::value)
+#endif
+
 inline usize next_pow2(usize val)
 {
 	usize x = val - 1;
@@ -187,7 +193,7 @@ struct hash_container : hash_base
 			kvbuf = alloc;
 			hbuf = (uhash*)((char*)kvbuf + align_up(sizeof(key_val) * capacity, alignof(usize)));
 
-			if (std::is_trivially_constructible<key_val>::value) {
+			if (c_trivially_copyable(key_val)) {
 				memcpy(alloc, rhs.kvbuf, alloc_size);
 			} else {
 				uhash *const hb = hbuf;
@@ -214,7 +220,7 @@ struct hash_container : hash_base
 
 	~hash_container()
 	{
-		if (!std::is_trivially_constructible<key_val>::value) {
+		if (!c_trivially_copyable(key_val)) {
 			uhash *const hb = hbuf;
 			key_val *const kvb = (key_val*)kvbuf;
 			for (usize i = 0; i < capacity; i++) {
