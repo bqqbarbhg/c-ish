@@ -14,11 +14,11 @@ env:
 
 install:
     - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha12/premake-5.0.0-alpha12-src.zip -O premake.zip
-    - unzip premake.zip
-    - cd premake-5.0.0-alpha6/build/gmake.unix
+    - unzip -qq premake.zip
+    - cd premake-5.0.0-alpha12/build/gmake.unix
     - make config=release
     - cd ../../..
-    - mv premake-5.0.0-alpha6/bin/release/premake5 premake5
+    - mv premake-5.0.0-alpha12/bin/release/premake5 premake5
 
 before_script:
     - premake5 gmake
