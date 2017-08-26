@@ -1,6 +1,7 @@
 #include "test.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <base/memory.h>
 #include <base/hash_map.h>
 
