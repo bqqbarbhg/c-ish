@@ -16,7 +16,12 @@ static inline uint32_t find_msb(uint32_t val)
 	return (uint32_t)index;
 }
 
-#else
+#elif p_compiler == p_gcc
+
+static inline uint32_t find_msb(uint32_t val)
+{
+	return 31 - __builtin_clz(val);
+}
 
 #endif
 
