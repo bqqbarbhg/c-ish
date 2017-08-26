@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base.h"
-#include <stdlib.h>
+#include "memory.h"
 #include <string.h>
 #include <new>
 #include <utility>
@@ -9,17 +9,6 @@
 
 typedef unsigned usize;
 typedef unsigned uhash;
-
-constexpr usize align_up(usize val, usize alignment)
-{
-	return val + ((alignment - (val & (alignment - 1))) & (alignment - 1));
-}
-
-#if __GNUG__ && __GNUC__ < 5
-#define c_trivially_copyable(x) (__has_trivial_copy(x))
-#else
-#define c_trivially_copyable(x) (std::is_trivially_copyable<x>::value)
-#endif
 
 inline usize next_pow2(usize val)
 {
@@ -58,6 +47,7 @@ struct hash_base
 		, capacity(0)
 		, hbuf(nullptr)
 		, kvbuf(nullptr)
+		, ator(nullptr)
 	{
 	}
 
@@ -66,30 +56,34 @@ struct hash_base
 		, capacity(hb.capacity)
 		, hbuf(hb.hbuf)
 		, kvbuf(hb.kvbuf)
+		, ator(hb.ator)
 	{
 
 		hb.count = 0;
 		hb.capacity = 0;
 		hb.hbuf = nullptr;
 		hb.kvbuf = nullptr;
+		hb.ator = nullptr;
 	}
 
 	hash_base(usize count, usize capacity)
 		: count(count)
 		, capacity(capacity)
+		, ator(nullptr)
 	{
 	}
 
 	~hash_base()
 	{
 		if (kvbuf)
-			free(kvbuf);
+			mem_free(kvbuf);
 	}
 
 	usize count;
 	usize capacity;
 	uhash *hbuf;
 	void  *kvbuf;
+	mem_allocator *ator;
 
 	// -- Iterators
 
@@ -111,13 +105,13 @@ struct hash_base
 
 		bool operator!=(const It &rhs) const
 		{
-			c_assert(base == rhs.base);
+			p_assert(base == rhs.base);
 			return index != rhs.index;
 		}
 
 		bool operator==(const It &rhs) const
 		{
-			c_assert(base == rhs.base);
+			p_assert(base == rhs.base);
 			return index == rhs.index;
 		}
 
@@ -189,11 +183,12 @@ struct hash_container : hash_base
 	{
 		if (rhs.count) {
 			size_t alloc_size = (sizeof(key_val) + sizeof(uhash)) * capacity + sizeof(uhash);
-			void *alloc = malloc(alloc_size);
+			size_t alloc_align = at_least(alignof(key_val), alignof(uhash));
+			void *alloc = mem_alloc_using(ator, alloc_size, alloc_align);
 			kvbuf = alloc;
 			hbuf = (uhash*)((char*)kvbuf + align_up(sizeof(key_val) * capacity, alignof(usize)));
 
-			if (c_trivially_copyable(key_val)) {
+			if (p_trivially_copyable(key_val)) {
 				memcpy(alloc, rhs.kvbuf, alloc_size);
 			} else {
 				uhash *const hb = hbuf;
@@ -220,7 +215,7 @@ struct hash_container : hash_base
 
 	~hash_container()
 	{
-		if (!c_trivially_copyable(key_val)) {
+		if (!p_trivially_copyable(key_val)) {
 			uhash *const hb = hbuf;
 			key_val *const kvb = (key_val*)kvbuf;
 			for (usize i = 0; i < capacity; i++) {
@@ -256,8 +251,11 @@ struct hash_container : hash_base
 		usize const old_cap = capacity;
 
 		capacity = new_size ? new_size * 2 : 8;
+		count = 0;
 
-		void *alloc = malloc((sizeof(key_val) + sizeof(uhash)) * capacity + sizeof(uhash));
+		size_t alloc_size = (sizeof(key_val) + sizeof(uhash)) * capacity + sizeof(uhash);
+		size_t alloc_align = at_least(alignof(key_val), alignof(uhash));
+		void *alloc = mem_alloc_using(ator, alloc_size, alloc_align);
 		kvbuf = alloc;
 		hbuf = (uhash*)((char*)kvbuf + align_up(sizeof(key_val) * capacity, alignof(usize)));
 		memset(hbuf, 0, sizeof(uhash) * capacity);
@@ -267,14 +265,14 @@ struct hash_container : hash_base
 			if (hval != 0) {
 				key_val *kv;
 				bool created = insert_with_hash_ptr(always_false(), hval, kv);
-				c_assert(created);
+				p_assert(created);
 				new (kv) key_val(std::move(kvb[i]));
 				kvb[i].~key_val();
 			}
 		}
 
 		if (kvb)
-			free((void*)kvb);
+			mem_free((void*)kvb);
 	}
 
 	// Erase with slot index
@@ -284,8 +282,8 @@ struct hash_container : hash_base
 		key_val *const kvb = (key_val*)kvbuf;
 		usize const mask = capacity - 1;
 
-		c_assert(slot_index < capacity);
-		c_assert(hb[slot_index] != 0);
+		p_assert(slot_index < capacity);
+		p_assert(hb[slot_index] != 0);
 
 		count--;
 
@@ -298,7 +296,7 @@ struct hash_container : hash_base
 			usize const next_index = (index + 1) & mask;
 			uhash hval = hb[next_index];
 
-			if (hval == 0 || ((hval - index) & mask) == 0)
+			if (hval == 0 || ((hval - next_index) & mask) == 0)
 			{
 				hb[index] = 0;
 				return;
@@ -443,6 +441,26 @@ struct hash_container : hash_base
 		if (pow2 * 2 > capacity)
 			rehash_impl(pow2);
 	}
+
+	void clear()
+	{
+		if (p_trivially_copyable(key_val)) {
+			memset(hbuf, 0, capacity * sizeof(uhash));
+		} else {
+			key_val *const kvb = (key_val*)kvbuf;
+			uhash *const hb = hbuf;
+			usize const cap = capacity;
+			for (usize i = 0; i < cap; i++) {
+				if (hb[i]) {
+					kvb[i].~key_val();
+					hb[i] = 0;
+				}
+			}
+		}
+
+		capacity = 0;
+		count = 0;
+	}
 };
 
 template <typename Key>
@@ -530,11 +548,12 @@ struct hash_map : hash_container<map_key_val<Key, Val>>
 		return iterator(this, base::find_first_used_slot(slot));
 	}
 
-	iterator erase(const Key &key)
+	bool erase(const Key &key)
 	{
 		usize slot = base::find_slot_with_hash(key, Hash()(key));
+		if (slot == capacity) return false;
 		base::erase_slot(slot);
-		return iterator(this, base::find_first_used_slot(slot));
+		return true;
 	}
 
 	iterator find(const Key &key)
@@ -595,11 +614,12 @@ struct hash_set : hash_container<set_key_val<Key>>
 		return iterator(this, base::find_first_used_slot(slot));
 	}
 
-	iterator erase(const Key &key)
+	bool erase(const Key &key)
 	{
 		usize slot = base::find_slot_with_hash(key, Hash()(key));
+		if (slot == capacity) return false;
 		base::erase_slot(slot);
-		return iterator(this, base::find_first_used_slot(slot));
+		return true;
 	}
 
 	const_iterator find(const Key &key) const
