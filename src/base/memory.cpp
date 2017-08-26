@@ -23,7 +23,7 @@ struct stdlib_allocator : mem_allocator
 {
 	virtual void *allocator_allocate(size_t size, size_t alignment) override
 	{
-		return aligned_alloc(size, alignment);
+		return aligned_alloc(alignment, size);
 	}
 	virtual void allocator_free(void *pointer) override
 	{
