@@ -1,6 +1,6 @@
-	#pragma once
+#pragma once
 
-#include <stdint.h>
+#include <base/base.h>
 
 struct test_case_struct
 {
