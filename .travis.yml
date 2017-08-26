@@ -22,8 +22,6 @@ env:
     - CONFIGURATION=debug_x64
     - CONFIGURATION=release_x86
     - CONFIGURATION=release_x64
-    - CONFIGURATION=final_release_x86
-    - CONFIGURATION=final_release_x64
 
 install:
     - ./install-premake.sh
