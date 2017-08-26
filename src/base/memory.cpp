@@ -23,11 +23,11 @@ struct stdlib_allocator : mem_allocator
 {
 	virtual void *allocator_allocate(size_t size, size_t alignment) override
 	{
-		return _aligned_malloc(size, alignment);
+		return aligned_alloc(size, alignment);
 	}
 	virtual void allocator_free(void *pointer) override
 	{
-		_aligned_free(pointer);
+		free(pointer);
 	}
 };
 
@@ -40,8 +40,13 @@ stdlib_allocator g_stdlib_allocator;
 // - Changing the default allocator
 struct mem_shared
 {
-	std::atomic<mem_allocator*> default_allocator = &g_stdlib_allocator;
+	std::atomic<mem_allocator*> default_allocator;
 	char cacheline_pad[64];
+
+	mem_shared()
+	{
+		default_allocator.store(&g_stdlib_allocator);
+	}
 };
 
 static mem_shared g_shared;

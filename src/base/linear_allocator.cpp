@@ -24,24 +24,22 @@ size_t linear_allocator::grow(size_t size, size_t alignment)
 	void *new_mem = mem_alloc_using(ator, new_cap, 64, sizeof(void*));
 	p_assert(new_mem != nullptr);
 
-	size_t new_pos = align_up(sizeof(void*), alignment);
-
 	*(void**)new_mem = memory;
 
-	memory = new_mem;
+	memory = (char*)new_mem + sizeof(void*);
 	capacity = new_cap;
-	pos = new_pos;
+	pos = 0;
 
-	return new_pos;
+	return 0;
 }
 
 void linear_allocator::reset()
 {
 	void *mem = memory;
 	while (mem) {
-		void *to_free = mem;
-		mem = *(void**)mem;
-		mem_free(to_free);
+		void *base = (char*)mem - sizeof(void*);
+		mem = *(void**)base;
+		mem_free(base);
 	}
 
 	memory = nullptr;

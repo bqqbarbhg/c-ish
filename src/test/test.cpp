@@ -114,9 +114,9 @@ bool run_tests()
 		}
 
 		if (g_did_fail) {
-			printf("%-6llu fail %s\n", g_num_asserts, test.name);
+			printf("%-6zu fail %s\n", g_num_asserts, test.name);
 		} else {
-			printf("%-8llu ok %s\n", g_num_asserts, test.name);
+			printf("%-8zu ok %s\n", g_num_asserts, test.name);
 		}
 
 		if (g_did_fail) {
