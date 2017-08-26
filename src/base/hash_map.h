@@ -551,7 +551,7 @@ struct hash_map : hash_container<map_key_val<Key, Val>>
 	bool erase(const Key &key)
 	{
 		usize slot = base::find_slot_with_hash(key, Hash()(key));
-		if (slot == capacity) return false;
+		if (slot == base::capacity) return false;
 		base::erase_slot(slot);
 		return true;
 	}
@@ -617,7 +617,7 @@ struct hash_set : hash_container<set_key_val<Key>>
 	bool erase(const Key &key)
 	{
 		usize slot = base::find_slot_with_hash(key, Hash()(key));
-		if (slot == capacity) return false;
+		if (slot == base::capacity) return false;
 		base::erase_slot(slot);
 		return true;
 	}
