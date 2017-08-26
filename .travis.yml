@@ -8,6 +8,7 @@ compiler:
 
 cache:
     apt: true
+    packages: true
     directories:
         - premake_build
 
