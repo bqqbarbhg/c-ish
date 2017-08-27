@@ -634,3 +634,9 @@ struct hash_set : hash_container<set_key_val<Key>>
 	iterator end() { return iterator(this, base::capacity); }
 };
 
+template <typename Key>
+using hash_set_base = hash_container<set_key_val<Key>>;
+
+template <typename Key, typename Val>
+using hash_map_base = hash_container<map_key_val<Key>>;
+

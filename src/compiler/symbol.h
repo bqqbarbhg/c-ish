@@ -26,6 +26,7 @@ constexpr inline uint32_t symbol_hash_feed(uint32_t hash, unsigned char byte)
 	return (hash ^ byte) * 16777619U;
 }
 
+void intern_symbols(size_t count, symbol *symbols, const char **strs, const uint32_t *lengths, const uint32_t *hashes);
 symbol intern_symbol(const char *str, uint32_t length, uint32_t hash);
 symbol intern_symbol(const char *str, uint32_t length);
 static inline symbol intern_symbol(const char *str)
