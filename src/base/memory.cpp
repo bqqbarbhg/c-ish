@@ -53,7 +53,7 @@ struct thread_data
 stdlib_allocator g_stdlib_allocator;
 std::atomic<allocator*> g_default_thread_allocator;
 thread_local thread_data t_thread_data;
-std::atomic_uint32_t g_thread_index_counter;
+std::atomic<uint32_t> g_thread_index_counter;
 
 thread_data *get_thread_data()
 {
