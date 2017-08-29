@@ -3,7 +3,7 @@
 #include <base/base.h>
 #include <base/memory.h>
 
-struct linear_allocator : mem_allocator
+struct linear_allocator : mem::allocator
 {
 	linear_allocator(const linear_allocator&) = delete;
 	linear_allocator &operator=(const linear_allocator&) = delete;
@@ -11,8 +11,8 @@ struct linear_allocator : mem_allocator
 	linear_allocator();
 	~linear_allocator();
 
-	virtual void *allocator_allocate(size_t size, size_t alignment) override;
-	virtual void allocator_free(void *) override;
+	virtual void *allocator_allocate(uint32_t thread, size_t size, size_t alignment) override;
+	virtual void allocator_free(uint32_t thread, void *pointer, size_t size, size_t alignment) override;
 
 	void *alloc(size_t size, size_t alignment)
 	{
@@ -33,6 +33,5 @@ struct linear_allocator : mem_allocator
 	void *memory;
 	size_t pos;
 	size_t capacity;
-	mem_allocator *ator;
+	mem::allocator *ator;
 };
-

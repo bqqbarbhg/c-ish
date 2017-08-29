@@ -20,8 +20,8 @@ size_t linear_allocator::grow(size_t size, size_t alignment)
 {
 	size_t new_cap = capacity ? capacity * 2 : initial_capacity;
 	new_cap = at_least(new_cap, size + alignment + 8);
-
-	void *new_mem = mem_alloc_using(ator, new_cap, 64, sizeof(void*));
+	new_cap = align_up(new_cap, 64);
+	void *new_mem = mem::alloc_using(ator, new_cap, 64, sizeof(void*));
 	p_assert(new_mem != nullptr);
 
 	*(void**)new_mem = memory;
@@ -39,7 +39,7 @@ void linear_allocator::reset()
 	while (mem) {
 		void *base = (char*)mem - sizeof(void*);
 		mem = *(void**)base;
-		mem_free(base);
+		mem::free(base);
 	}
 
 	memory = nullptr;
@@ -47,11 +47,10 @@ void linear_allocator::reset()
 	capacity = 0;
 }
 
-void *linear_allocator::allocator_allocate(size_t size, size_t alignment)
+void *linear_allocator::allocator_allocate(uint32_t thread, size_t size, size_t alignment)
 {
 	return alloc(size, alignment);
 }
-void linear_allocator::allocator_free(void *)
+void linear_allocator::allocator_free(uint32_t thread, void *pointer, size_t size, size_t alignment)
 {
 }
-

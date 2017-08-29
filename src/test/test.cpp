@@ -27,28 +27,28 @@ struct pointer_hash
 	}
 };
 
-struct test_allocator : mem_allocator
+struct test_allocator : mem::allocator
 {
 	hash_map<void*, size_t, pointer_hash> allocs;
-	mem_allocator *inner;
+	mem::allocator *inner;
 
 	test_allocator()
 	{
-		allocs.ator = inner = mem_get_standard_allocator();
+		allocs.ator = inner = mem::get_standard_allocator();
 	}
 
-	virtual void *allocator_allocate(size_t size, size_t alignment) override
+	virtual void *allocator_allocate(uint32_t thread, size_t size, size_t alignment) override
 	{
-		void *mem = inner->allocator_allocate(size, alignment);
+		void *mem = inner->allocator_allocate(thread, size, alignment);
 		allocs.insert(mem, size);
 		return mem;
 	}
 
-	virtual void allocator_free(void *pointer) override
+	virtual void allocator_free(uint32_t thread, void *pointer, size_t size, size_t alignment) override
 	{
 		bool found = allocs.erase(pointer);
 		p_assert(found);
-		inner->allocator_free(pointer);
+		inner->allocator_free(thread, pointer, size, alignment);
 	}
 };
 
@@ -96,7 +96,7 @@ void test_fail(const char *file, int line, const char *expr, const char *msg)
 bool run_tests()
 {
 	test_allocator ator;
-	mem_allocator *prev = mem_set_default_allocator(&ator);
+	mem::allocator *prev = mem::set_default_allocator_for_this_thread(&ator);
 
 	uint32_t num = g_num_tests;
 	uint32_t num_fail = 0;
@@ -110,7 +110,7 @@ bool run_tests()
 
 		test.func();
 
-		if (!(ator.allocs.count == 0)) {
+		if (!g_did_fail && !(ator.allocs.count == 0)) {
 			test_fail(__FILE__, __LINE__, "ator.allocs.count == 0" , "Test should not leak memory");
 		}
 
@@ -126,7 +126,7 @@ bool run_tests()
 		}
 	}
 
-	mem_allocator *should_be_ator = mem_set_default_allocator(prev);
+	mem::allocator *should_be_ator = mem::set_default_allocator_for_this_thread(prev);
 	p_assert(should_be_ator == &ator);
 
 	printf("Tests passed: %u/%u\n", num - num_fail, num);

@@ -76,14 +76,14 @@ struct hash_base
 	~hash_base()
 	{
 		if (kvbuf)
-			mem_free(kvbuf);
+			mem::free(kvbuf);
 	}
 
 	usize count;
 	usize capacity;
 	uhash *hbuf;
 	void  *kvbuf;
-	mem_allocator *ator;
+	mem::allocator *ator;
 
 	// -- Iterators
 
@@ -184,7 +184,7 @@ struct hash_container : hash_base
 		if (rhs.count) {
 			size_t alloc_size = (sizeof(key_val) + sizeof(uhash)) * capacity + sizeof(uhash);
 			size_t alloc_align = at_least(alignof(key_val), alignof(uhash));
-			void *alloc = mem_alloc_using(ator, alloc_size, alloc_align);
+			void *alloc = mem::alloc_using(ator, alloc_size, alloc_align);
 			kvbuf = alloc;
 			hbuf = (uhash*)((char*)kvbuf + align_up(sizeof(key_val) * capacity, alignof(usize)));
 
@@ -255,7 +255,7 @@ struct hash_container : hash_base
 
 		size_t alloc_size = (sizeof(key_val) + sizeof(uhash)) * capacity + sizeof(uhash);
 		size_t alloc_align = at_least(alignof(key_val), alignof(uhash));
-		void *alloc = mem_alloc_using(ator, alloc_size, alloc_align);
+		void *alloc = mem::alloc_using(ator, alloc_size, alloc_align);
 		kvbuf = alloc;
 		hbuf = (uhash*)((char*)kvbuf + align_up(sizeof(key_val) * capacity, alignof(usize)));
 		memset(hbuf, 0, sizeof(uhash) * capacity);
@@ -272,7 +272,7 @@ struct hash_container : hash_base
 		}
 
 		if (kvb)
-			mem_free((void*)kvb);
+			mem::free((void*)kvb);
 	}
 
 	// Erase with slot index
